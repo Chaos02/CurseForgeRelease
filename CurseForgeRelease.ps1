@@ -24,17 +24,24 @@ Provide a String of change notes.
 #>
 
 param(
-	[Parameter(Mandatory)][string]$APIKey=(Get-Content -Raw -Path ((Split-Path -Parent $PSScriptRoot) + '/CurseForge_token.key')),
+	[Parameter(Mandatory)][string]$APIKey,
 	[Parameter(Mandatory)][string]$ProjectID,
 	[Parameter(Mandatory)][string]$File,
 	[Parameter(Mandatory)][string[]]$GameVersions,
+	[ValidateSet('text','html','markdown')]
 	[string]$ChangeLogType='text',
+	[ValidateSet('release','beta','alpha')]
 	[string]$ReleaseType='release',
 	[string]$ChangeLog=''
 )
 
 if ($DebugPreference) {
 	Set-PSDebug -Trace 2
+}
+
+if ( Test-Path $APIKey -PathType Leaf ) {
+	Write-Host 'Reading token from file: $Token'
+	$APIKey = (Get-Content -Raw -Path ((Split-Path -Parent $PSScriptRoot) + '/' + $APIKey))
 }
 
 # Documentation: https:#support.curseforge.com/en/support/solutions/articles/9000197321-curseforge-upload-api
