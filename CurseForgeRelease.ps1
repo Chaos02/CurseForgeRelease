@@ -28,7 +28,9 @@ param(
 	[Parameter(Mandatory)][string]$ProjectID,
 	[Parameter(Mandatory)][string]$File,
 	[Parameter(Mandatory)][string[]]$GameVersions,
+	[ValidateSet('text','html','markdown')]
 	[string]$ChangeLogType='text',
+	[ValidateSet('release','beta','alpha')]
 	[string]$ReleaseType='release',
 	[string]$ChangeLog=''
 )
@@ -37,22 +39,27 @@ if ($DebugPreference) {
 	Set-PSDebug -Trace 2
 }
 
+if ( Test-Path $APIKey -PathType Leaf ) {
+	Write-Host 'Reading token from file: $Token'
+	$APIKey = (Get-Content -Raw -Path ((Split-Path -Parent $PSScriptRoot) + '/' + $APIKey))
+}
+
 # Documentation: https:#support.curseforge.com/en/support/solutions/articles/9000197321-curseforge-upload-api
-$metadata= @{
-	changelog: "$ChangeLog", # Can be HTML or markdown if changelogType is set.
-	changelogType: "$ChangeLogType", # Optional: defaults to text
-	displayName: '', # Optional: A friendly display name used on the site if provided.
-	parentFileID: '', # Optional: The parent file of this file.
-	gameVersions: "$GameVersions", # A list of supported game versions, see the Game Versions API for details. Not supported if parentFileID is provided.
-	releaseType: "$ReleaseType", # One of "alpha", "beta", "release".
-	relations: {} <#
-		projects: [{
-			slug: "mantle", # Slug of related plugin.
-			type: ["embeddedLibrary", "incompatible", "optionalDependency", "requiredDependency", "tool"] # Choose one
-		}]
+$metadata = @{
+	'changelog' = "$ChangeLog" # Can be HTML or markdown if changelogType is set.
+	'changelogType' = "$ChangeLogType" # Optional: defaults to text
+	'displayName' = '' # Optional: A friendly display name used on the site if provided.
+	'parentFileID' = '' # Optional: The parent file of this file.
+	'gameVersions' = "$GameVersions" # A list of supported game versions, see the Game Versions API for details. Not supported if parentFileID is provided.
+	'releaseType' = "$ReleaseType" # One of "alpha", "beta", "release".
+	'relations' = {}; <#
+		'projects' = @{
+			'slug' = "mantle" # Slug of related plugin.
+			'type' = ["embeddedLibrary", "incompatible", "optionalDependency", "requiredDependency", "tool"] # Choose one
+		}
 	} # Optional: An array of project relations by slug and type of dependency for inclusion in your project. #>
 }
 
 Write-Host -BackgroundColor DarkCyan ($metadata | Format-List | Out-String)
-$postParams = @{metadata="$metadata";file=(Get-Content -Raw -Path $File)}
+$postParams = @{metadata="$metadata";file=(Get-Content -Raw -Path $File);token=$APIKey}
 Invoke-WebRequest -Uri /api/projects/$projectId/upload-file -Method POST -Body $postParams
